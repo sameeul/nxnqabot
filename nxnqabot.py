@@ -41,10 +41,17 @@ def echo(bot, update):
 def error(bot, update, error):
     logger.warn('Update "%s" caused error "%s"' % (update, error))
 
-
+def get_token():
+    token_file = open('/home/samee/scratch/telegram_nxnqabot_key','r')
+    token = token_file.read()
+    token.rstrip()
+    token_file.close()
+    
+    return token
+ 
 def main():
     # Create the EventHandler and pass it your bot's token.
-    updater = Updater("353050827:AAGvbhyHO0ZAPg2St8bAbiYUaqsqnU2N0KI")
+    updater = Updater(get_token())
 
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
