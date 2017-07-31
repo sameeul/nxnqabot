@@ -1,78 +1,64 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+# Simple Bot to reply to Slack messages for NXN QA
+# Sample code taken from 
+# https://www.fullstackpython.com/blog/build-first-slack-bot-python.html
 #
-# Simple Bot to reply to Telegram messages
-# This program is dedicated to the public domain under the CC0 license.
-"""
-This Bot uses the Updater class to handle the bot.
-First, a few handler functions are defined. Then, those functions are passed to
-the Dispatcher and registered at their respective places.
-Then, the bot is started and runs until we press Ctrl-C on the command line.
-Usage:
-Basic Echobot example, repeats messages.
-Press Ctrl-C on the command line or send a signal to the process to stop the
-bot.
-"""
+import os
+import time
+from slackclient import SlackClient
+import re
+import nxnqainfo
 
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-import logging
+# Define some constants
+BOT_ID = os.environ.get("BOT_ID")
+AT_BOT = "<@" + BOT_ID + ">"
+slack_client = SlackClient(os.environ.get('SLACK_BOT_TOKEN'))
+READ_WEBSOCKET_DELAY = 1 # delay between reading msg
+#BOT_NAME = 'nxnqabot'
 
-# Enable logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
+# Define command handler. 
 
-logger = logging.getLogger(__name__)
-
-
-# Define a few command handlers. These usually take the two arguments bot and
-# update. Error handlers also receive the raised TelegramError object in error.
-def start(bot, update):
-    update.message.reply_text('Hi!')
-
-
-def help(bot, update):
-    update.message.reply_text('Help!')
+def handle_command(command, channel, user):
+    command.strip()
+    if(command.find("chase_status",0,12)!=-1):
+        my_regex = re.compile('^(chase_status)\s+(\d+)$')
+        mo = my_regex.search(command)
+        if(mo is not None):
+            reply_msg = nxnqainfo.chase_cp_info(mo.group(2))
+        else:
+            reply_msg = "Sorry, I did not understand that. Use something like \"chase_status 1234\" where 1234 is the CP number."
+        slack_client.api_call("chat.postMessage", channel = user, 
+                              text = reply_msg, as_user = True)
 
 
-def echo(bot, update):
-    update.message.reply_text(update.message.text)
 
 
-def error(bot, update, error):
-    logger.warn('Update "%s" caused error "%s"' % (update, error))
+def parse_slack_output(slack_rtm_output):
+    """
+        The Slack Real Time Messaging API is an events firehose.
+        this parsing function returns None unless a message is
+        directed at the Bot, based on its ID.
+    """
+    output_list = slack_rtm_output
+    if output_list and len(output_list) > 0:
+        for output in output_list:
 
-def get_token():
-    token_file = open('/home/samee/scratch/telegram_nxnqabot_key','r')
-    token = token_file.read()
-    token.rstrip()
-    token_file.close()
-    
-    return token
+            if output and 'text' in output and AT_BOT in output['text']:
+                # return text after the @ mention, whitespace removed
+                return output['text'].split(AT_BOT)[1].strip().lower(),output['channel'], output['user']
+    return None, None, None
+
  
 def main():
-    # Create the EventHandler and pass it your bot's token.
-    updater = Updater(get_token())
+    if slack_client.rtm_connect():
+        print("nxnqabot connected and running")
+        while True:
+            command, channel, user = parse_slack_output(slack_client.rtm_read())
+            if command and channel:
+                handle_command(command, channel, user)
+            time.sleep(READ_WEBSOCKET_DELAY)
 
-    # Get the dispatcher to register handlers
-    dp = updater.dispatcher
-
-    # on different commands - answer in Telegram
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("help", help))
-
-    # on noncommand i.e message - echo the message on Telegram
-    dp.add_handler(MessageHandler(Filters.text, echo))
-
-    # log all errors
-    dp.add_error_handler(error)
-
-    # Start the Bot
-    updater.start_polling()
-
-    # Run the bot until you press Ctrl-C or the process receives SIGINT,
-    # SIGTERM or SIGABRT. This should be used most of the time, since
-    # start_polling() is non-blocking and will stop the bot gracefully.
-    updater.idle()
+    else:
+        print("Unable to connect")
 
 
 if __name__ == '__main__':
