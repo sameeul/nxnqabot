@@ -9,7 +9,6 @@ NAST = "//plm/cinas/cae_nxn/nastran_tools/bin"
 def qa_run_cmd(cmd):
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True)
     stdout, stderr = p.communicate() 
-    print(stdout)
     return stdout.strip()
 
 # returns a string of test case names associated with the CP
