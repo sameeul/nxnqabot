@@ -9,11 +9,14 @@ import re
 import nxnqainfo
 
 # Define some constants
-BOT_ID = os.environ.get("BOT_ID")
+BOT_ID = str(os.environ.get("SLACK_BOT_ID"))
 AT_BOT = "<@" + BOT_ID + ">"
 slack_client = SlackClient(os.environ.get('SLACK_BOT_TOKEN'))
 READ_WEBSOCKET_DELAY = 1 # delay between reading msg
 #BOT_NAME = 'nxnqabot'
+
+#set nxn tools version
+os.putenv("NXN_TOOLS_VER","12")
 
 # Define command handler. 
 
@@ -23,12 +26,15 @@ def handle_command(command, channel, user):
         my_regex = re.compile('^(chase_status)\s+(\d+)$')
         mo = my_regex.search(command)
         if(mo is not None):
-            reply_msg = nxnqainfo.chase_cp_info(mo.group(2))
+            reply_msg = "Here is the list of reported new failures:\n"+nxnqainfo.chase_cp_info(mo.group(2))
         else:
             reply_msg = "Sorry, I did not understand that. Use something like \"chase_status 1234\" where 1234 is the CP number."
         slack_client.api_call("chat.postMessage", channel = user, 
                               text = reply_msg, as_user = True)
-
+    else:
+        reply_msg = "Sorry, I did not understand that. Use something like \"chase_status 1234\" where 1234 is the CP number."
+        slack_client.api_call("chat.postMessage", channel = user, 
+                              text = reply_msg, as_user = True)
 
 
 
