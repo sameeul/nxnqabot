@@ -22,18 +22,21 @@ os.putenv("NXN_TOOLS_VER","12")
 
 def handle_command(command, channel, user):
     command.strip()
-    if(command.find("chase_status",0,12)!=-1):
+    if(command.find("chase_status",0,12)!=-1): # get chase status
         my_regex = re.compile('^(chase_status)\s+(\d+)$')
         mo = my_regex.search(command)
         if(mo is not None):
             reply_msg = "Here is the list of reported new failures:\n"+nxnqainfo.chase_cp_info(mo.group(2))
         else:
             reply_msg = "Sorry, I did not understand that. Use something like \"chase_status 1234\" where 1234 is the CP number."
-        slack_client.api_call("chat.postMessage", channel = user, 
-                              text = reply_msg, as_user = True)
+
+    elif(command.find("scan_new",0,8)!=-1): # check is scan_new is created or not
+        reply_msg = nxnqainfo.scan_new_status()
+
     else:
-        reply_msg = "Sorry, I did not understand that. Use something like \"chase_status 1234\" where 1234 is the CP number."
-        slack_client.api_call("chat.postMessage", channel = user, 
+        reply_msg = "Sorry, I did not understand that. Currently supported requests are \"chase_status\" and \"scan_new\"."
+    
+    slack_client.api_call("chat.postMessage", channel = user, 
                               text = reply_msg, as_user = True)
 
 
